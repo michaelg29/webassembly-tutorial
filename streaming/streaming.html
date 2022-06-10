@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Streaming</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        var exports;
+        WebAssembly.instantiateStreaming(
+            fetch("streaming.wasm"), {}
+        ).then(results => exports = results.instance.exports);
+
+        function run_wasm() {
+            var a = document.querySelector("#a").value;
+            var sum = exports.sumOfNInts(a);
+
+            document.querySelector("#ret")
+                .innerHTML += `${a} => ${sum}<br/>`;
+        }
+    </script>
+
+    <input type="number" id="a">
+    <button onclick="run_wasm()">Trigger</button>
+    <p id="ret"></p>
+</body>
+
+</html>
