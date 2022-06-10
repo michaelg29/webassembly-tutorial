@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>CCall and CWrap</title>
+
+    <script src="wrapping.js"></script>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        var addNums = Module.cwrap(
+            "addNums",
+            "number",
+            ["number", "number"]
+        );
+        var subtractNums = Module.cwrap(
+            "subtractNums",
+            "number",
+            ["number", "number"]
+        );
+
+        function run_wasm() {
+            var result = Module.ccall(
+                "main",
+                "number",
+                null,
+                null
+            );
+            console.log(result);
+
+            var a = document.querySelector("#a").value;
+            var b = document.querySelector("#b").value;
+            result = Module.ccall(
+                "addNums",
+                "number",
+                ["number", "number"],
+                [a, b]
+            );
+            console.log(result);
+
+            result = addNums(a, b);
+            console.log(result);
+
+            result = subtractNums(a, b);
+            console.log(result);
+        }
+    </script>
+
+    <input type="number" id="a">
+    <input type="number" id="b">
+    <button onclick="run_wasm()">Trigger</button>
+</body>
+
+</html>
