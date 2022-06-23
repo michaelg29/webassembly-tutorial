@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Streaming</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        var memory = new WebAssembly.Memory({
+            initial: 256,
+            maximum: 512
+        });
+
+        var exports;
+        WebAssembly.instantiateStreaming(fetch("memory.wasm"), {
+            js: {
+                mem: memory
+            }
+        }).then(results => {
+            exports = results.instance.exports;
+            memory = results.instance.exports.memory;
+        });
+
+        function run_wasm() {
+            var arr = new Uint32Array(memory.buffer);
+            for (var i = 0; i < 10; i++) {
+                arr[i] = i * 2;
+            }
+
+            var sum = exports.accumulate(0, 10);
+
+            document.querySelector("#ret")
+                .innerHTML += `${sum}<br>`;
+        }
+
+        function get_string() {
+            var ptr = exports.getString();
+            var bytes = new Uint8Array(memory.buffer, ptr);
+            var strlen = 0;
+            while (bytes[strlen] != 0) strlen++;
+
+            var str = new TextDecoder("utf8").decode(
+                bytes.slice(0, strlen)
+            );
+            console.log(str);
+            navigator.clipboard.writeText(str);
+        }
+    </script>
+
+    <input type="number" id="a">
+    <button onclick="run_wasm()">Trigger</button>
+    <button onclick="get_string()">Copy string</button>
+    <p id="ret"></p>
+</body>
+
+</html>

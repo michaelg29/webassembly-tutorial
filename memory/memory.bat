@@ -1,0 +1,1 @@
+emcc memory.c -o memory.js
