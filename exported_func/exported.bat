@@ -1,0 +1,1 @@
+gcc exported.c -o exported.js

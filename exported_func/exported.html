@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Exported Functions</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        var memory = new WebAssembly.Memory({
+            initial: 256,
+            maximum: 512
+        });
+
+        var exports;
+        WebAssembly.instantiateStreaming(fetch("exported.wasm"), {
+            js: {
+                mem: memory
+            },
+            env: {
+                emscripten_resize_heap: (delta) => memory.grow(delta),
+                randomNum: (min, max) => Math.floor(Math.random() * (max - min)) + min,
+                print: (arg) => console.log(arg)
+            }
+        }).then(results => {
+            exports = results.instance.exports;
+            memory = results.instance.exports.memory;
+        });
+
+        function get_string() {
+            var ptr = exports.randString(4);
+            console.log(ptr);
+            var bytes = new Uint8Array(memory.buffer, ptr);
+            var strlen = 0;
+            while (bytes[strlen] != 0) strlen++;
+            console.log(strlen);
+
+            var str = new TextDecoder("utf8").decode(
+                bytes.slice(0, strlen)
+            );
+            console.log(str);
+            navigator.clipboard.writeText(str);
+            document.querySelector("#ret")
+                .innerHTML += `${str}<br>`;
+        }
+    </script>
+
+    <button onclick="get_string()">Copy string</button>
+    <p id="ret"></p>
+</body>
+
+</html>
