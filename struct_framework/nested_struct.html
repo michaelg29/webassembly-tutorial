@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Basic Struct</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script src="struct_framework.js"></script>
+    <script>
+        var nameFormat = {
+            "first": "string",
+            "last": "string"
+        };
+        var structFormat = {
+            "a": "int",
+            "b": "int",
+            "n": "name"
+        };
+        registerStruct("name", nameFormat);
+        registerStruct("struct", structFormat);
+
+        var memory = new WebAssembly.Memory({
+            initial: 256,
+            maximum: 512
+        });
+
+        var exports;
+        WebAssembly.instantiateStreaming(fetch("nested_struct.wasm"), {
+            js: {
+                mem: memory
+            },
+            env: {
+                emscripten_resize_heap: (delta) => memory.grow(delta),
+                
+            },
+            wasi_snapshow_preview1: {
+                    proc_exit: () => null
+                }
+        }).then(results => {
+            exports = results.instance.exports;
+            memory = results.instance.exports.memory;
+        });
+
+        function alloc_struct() {
+            var a = document.querySelector("#a").value;
+            var b = document.querySelector("#b").value;
+
+            var ptr = exports.createPair(a, b);
+            var struct = decodeStruct("struct", ptr, memory);
+            console.log(struct);
+            exports.wasmfree(ptr);
+
+            var str = `${struct["a"]}, ${struct["b"]}`;
+            console.log(str);
+            document.querySelector("#ret")
+                .innerHTML += `${str}<br>`;
+        }
+
+        function compute_sum() {
+            var a = document.querySelector("#a").value;
+            var b = document.querySelector("#b").value;
+            var struct = {
+                "a": a,
+                "b": b
+            };
+
+            var ptr = encodeStruct("struct", struct, memory, (n) => exports.wasmmalloc(n));
+            var sum = exports.sum(ptr);
+            exports.wasmfree(ptr);
+
+            console.log(sum);
+            document.querySelector("#ret")
+                .innerHTML += `${sum}<br>`;
+        }
+    </script>
+
+    <input type="number" id="a" />
+    <input type="number" id="b" />
+    <button onclick="alloc_struct()">Generate structure</button>
+    <button onclick="compute_sum()">Compute sum</button>
+    <p id="ret"></p>
+</body>
+
+</html>
