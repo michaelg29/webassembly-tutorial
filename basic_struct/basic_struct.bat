@@ -1,0 +1,1 @@
+emcc basic_struct.c -o basic_struct.js
