@@ -31,7 +31,7 @@
                 mem: memory
             },
             env: {
-                curTime: () => 100,
+                curTime: () => Date.now(),
                 logProgress: logProgress,
                 emscripten_resize_heap: memory.grow
             }
@@ -42,7 +42,6 @@
 
         function logProgress(proportion) {
             console.log(proportion * 100.0, `${(proportion * 200.0) | 0}px`);
-            alert(proportion);
             document.getElementById("progress").style.width = `${(proportion * 200.0) | 0}px`;
         }
 
@@ -51,37 +50,6 @@
             console.log(str);
             navigator.clipboard.writeText(str);
             document.querySelector("#ret").innerHTML += `${str}<br/>`;
-        }
-
-        function encodeArray(arr, len, sizeof = 1) {
-            var ptr;
-            var out;
-            if (sizeof == 8) {
-                ptr = exports.wasmmalloc(len * 8);
-                out = new BigUint64Array(memory.buffer, ptr);
-            }
-            else if (sizeof == 4) {
-                ptr = exports.wasmmalloc(len * 4);
-                out = new Uint32Array(memory.buffer, ptr);
-            }
-            else {
-                ptr = exports.wasmmalloc(len);
-                out = new Uint8Array(memory.buffer, ptr);
-            }
-
-            for (var i = 0; i < len; i++) {
-                out[i] = arr[i];
-            }
-
-            return ptr;
-        }
-
-        function decodeArray(ptr, len) {
-            return new Uint8Array(memory.buffer).slice(ptr, ptr + len);
-        }
-
-        function decodeString(ptr, len) {
-            return new TextDecoder("utf8").decode(decodeArray(ptr, len));
         }
 
         function decodeString(ptr) {
