@@ -1,0 +1,1 @@
+emcc exported.c -o exported.js

@@ -5,6 +5,15 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Streaming</title>
+
+    <style>
+        #progress {
+            height: 30px;
+            width: 0px;
+            display: block;
+            background-color: navy;
+        }
+    </style>
 </head>
 
 <body>
@@ -17,11 +26,13 @@
         });
 
         var exports;
-        WebAssembly.instantiateStreaming(fetch("malloc.wasm"), {
+        WebAssembly.instantiateStreaming(fetch("exported.wasm"), {
             js: {
                 mem: memory
             },
             env: {
+                curTime: () => 100,
+                logProgress: logProgress,
                 emscripten_resize_heap: memory.grow
             }
         }).then(results => {
@@ -29,22 +40,17 @@
             memory = results.instance.exports.memory;
         });
 
-        function run_wasm() {
-            var arr = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
-            var ptr = encodeArray(arr, 11, 4);
-
-            var sum = exports.accumulate(ptr, 11);
-
-            exports.wasmfree(ptr);
-
-            document.querySelector("#ret")
-                .innerHTML += `${sum}<br>`;
+        function logProgress(proportion) {
+            console.log(proportion * 100.0, `${(proportion * 200.0) | 0}px`);
+            alert(proportion);
+            document.getElementById("progress").style.width = `${(proportion * 200.0) | 0}px`;
         }
 
         function get_string() {
-            var str = decodeString(exports.getString());
+            var str = decodeString(exports.randString(40));
             console.log(str);
             navigator.clipboard.writeText(str);
+            document.querySelector("#ret").innerHTML += `${str}<br/>`;
         }
 
         function encodeArray(arr, len, sizeof = 1) {
@@ -88,8 +94,8 @@
     </script>
 
     <input type="number" id="a">
-    <button onclick="run_wasm()">Trigger</button>
     <button onclick="get_string()">Copy string</button>
+    <div id="progress"></div>
     <p id="ret"></p>
 </body>
 
