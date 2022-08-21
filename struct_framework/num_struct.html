@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Streaming</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script src="struct_framework.js"></script>
+    <script>
+        registerStruct("struct", {
+            "a": "int",
+            "b": "int"
+        });
+
+        var memory = new WebAssembly.Memory({
+            initial: 256,
+            maximum: 512
+        });
+
+        var exports;
+        WebAssembly.instantiateStreaming(fetch("num_struct.wasm"), {
+            js: {
+                mem: memory
+            },
+            env: {
+                emscripten_resize_heap: memory.grow
+            }
+        }).then(results => {
+            exports = results.instance.exports;
+            memory = results.instance.exports.memory;
+        });
+
+        function run_wasm() {
+            const a = document.querySelector("#a").value;
+            const b = document.querySelector("#b").value;
+            const c = document.querySelector("#c").value;
+
+            var ptr = exports.wasmmalloc(12);
+            var buf = new Uint32Array(memory.buffer, ptr, 2);
+            buf[0] = a; // int
+            buf[1] = b; // int
+
+            buf = new Float32Array(memory.buffer, ptr + 8, 1);
+            console.log(buf);
+            buf[0] = c; // float
+
+            var sum = exports.computeSum(ptr);
+            console.log(sum);
+            exports.wasmfree(ptr);
+        }
+    </script>
+
+    <input type="number" id="a">
+    <input type="number" id="b">
+    <input type="number" id="c">
+    <button onclick="run_wasm()">Compute Sum</button>
+    <p id="ret"></p>
+</body>
+
+</html>

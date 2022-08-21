@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Streaming</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script src="struct_framework.js"></script>
+    <script>
+        registerStruct("sub", {
+            "c": "int",
+            "d": "int"
+        });
+        registerStruct("struct", {
+            "a": "int",
+            "b": "int",
+            "s": "sub"
+        });
+
+        var memory = new WebAssembly.Memory({
+            initial: 256,
+            maximum: 512
+        });
+
+        var exports;
+        WebAssembly.instantiateStreaming(fetch("nested_struct.wasm"), {
+            js: {
+                mem: memory
+            },
+            env: {
+                emscripten_resize_heap: memory.grow
+            }
+        }).then(results => {
+            exports = results.instance.exports;
+            memory = results.instance.exports.memory;
+        });
+
+        function run_wasm() {
+            const a = document.querySelector("#a").value;
+            const b = document.querySelector("#b").value;
+
+            var ptr = exports.createStruct(a, b, 413498123, 56);
+            var res = exports.computeSum(ptr);
+            console.log(res);
+            const obj = startDecodeStruct("struct", ptr, memory);
+            console.log(obj);
+            console.log(ptr);
+            exports.wasmfree(ptr);
+        }
+
+        function encode() {
+            const a = document.querySelector("#a").value;
+            const b = document.querySelector("#b").value;
+
+            var ptr = startEncodeStruct("struct", {
+                "a": a,
+                "b": b,
+                "s": {
+                    "c": 413498123,
+                    "d": 1056
+                }
+            }, memory, exports.wasmmalloc);
+            console.log(ptr);
+            var sum = exports.computeSum(ptr);
+            console.log(a * b + 413498123 / 1056);
+            console.log(sum);
+            exports.wasmfree(ptr);
+        }
+    </script>
+
+    <input type="number" id="a">
+    <input type="number" id="b">
+    <input type="number" id="c">
+    <button onclick="run_wasm()">Compute Sum</button>
+    <button onclick="encode()">Encode</button>
+    <p id="ret"></p>
+</body>
+
+</html>
