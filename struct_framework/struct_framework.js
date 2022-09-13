@@ -1,13 +1,10 @@
 let types = {
     char: 1,
-    short: 2,
     int: 4,
     float: 4,
-    double: 8,
-    long: 8
 }
 
-let primitives = ["char", "short", "int", "float", "double", "long"];
+let primitives = ["char", "int", "float"];
 
 let structs = {};
 
@@ -16,51 +13,98 @@ function registerStruct(name, structFormat) {
     structs[name] = structFormat;
 }
 
+function getElemSize(type) {
+    if (type.endsWith('*') || type.endsWith('[]')) {
+        return 4;
+    } else {
+        return types[type];
+    }
+}
+
 function computeStructSize(structFormat) {
     let size = 0;
 
     for (const type of Object.values(structFormat)) {
-        size += types[type];
+        size += getElemSize(type);
     }
 
     return size;
 }
 
-function encodeNum(num, n, buffer, offset = 0) {
-    console.log(buffer, offset);
+function encodeInt(num, n, buffer, offset = 0) {
     for (var i = 0; i < n; i++) {
         buffer[i + offset] = num & 0xff;
-        console.log(num, buffer[i + offset]);
         num >>= 8;
     }
 }
 
-function encodeStruct(name, obj, buffer, offset = 0) {
-    let cursor = offset;
-    for (const [key, type] of Object.entries(structs[name])) {
-        // encode the number
-        if (primitives.includes(type)) {
-            encodeNum(obj[key] ?? 0, types[type], buffer, cursor);
-        } else {
-            encodeStruct(type, obj[key] ?? {}, buffer, cursor);
-        }
+function encodeStruct(type, obj, buffer, memory, malloc, cursor = 0, pointer = 0) {
+    for (const [name, elemType] of Object.entries(structs[type])) {
+        encodeElem(elemType, obj[name], buffer, memory, malloc, cursor, pointer);
 
-        cursor += types[type];
+        cursor += getElemSize(elemType);
     }
 }
 
-function startEncodeStruct(name, obj, memory, malloc) {
-    var ptr = malloc(types[name]);
-    console.log(ptr);
-    let buf = new Uint8Array(memory.buffer, ptr, types[name]);
-    console.log(memory, typeof memory.buffer);
-    console.log(name, types[name], obj);
+function encodePointer(type, obj, memory, malloc) {
+    if (!obj) {
+        return 0; // NULL
+    }
 
-    encodeStruct(name, obj, buf);
+    const n = getElemSize(type);
+    const ptr = malloc(n);
+    const buf = new Uint8Array(memory.buffer, ptr, n);
+    console.log("allocated", n, 'at', ptr, 'for', type);
 
-    console.log(buf);
+    encodeElem(type, obj, buf, memory, malloc, 0, ptr);
+    return ptr;
+}
+
+function encodeArray(type, obj, memory, malloc) {
+    if (!obj) {
+        return 0; // NULL
+    }
+
+    const nIndividual = getElemSize(type);
+    const n = (obj.length + 1) * nIndividual;
+    const ptr = malloc(n);
+    const buf = new Uint8Array(memory.buffer, ptr, n);
+    if (type === 'char') {
+        console.log('setting string', obj, obj.length, nIndividual, n);
+        for (var i = 0; i < obj.length; i++) {
+            buf[i] = obj[i];
+        }
+        buf[obj.length] = 0;
+    } else {
+        let cursor = 0;
+        for (var i = 0; i < obj.length; i++) {
+            encodeElem(type, obj[i], buf, memory, malloc, cursor, ptr);
+            cursor += nIndividual;
+        }
+        encodeInt(0, nIndividual, buf, cursor); // terminator element
+    }
 
     return ptr;
+}
+
+function encodeElem(type, obj, buffer, memory, malloc, cursor = 0, pointer = 0) {
+    console.log('encoding', obj, type, 'at', pointer, 'offset by', cursor);
+    if (type.endsWith('*')) {
+        const ptr = encodePointer(type.substring(0, type.length - 1), obj, memory, malloc);
+        encodeInt(ptr, 4, buffer, cursor);
+    } else if (type.endsWith('[]')) {
+        const ptr = encodeArray(type.substring(0, type.length - 2), obj, memory, malloc);
+        encodeInt(ptr, 4, buffer, cursor);
+    } else if (primitives.includes(type)) {
+        if (type !== 'float') {
+            encodeInt(obj ?? 0, types[type], buffer, cursor);
+        } else {
+            const floatBuf = new Float32Array(memory.buffer, pointer + cursor);
+            floatBuf[0] = obj ?? 0.0;
+        }
+    } else {
+        encodeStruct(type, obj, buffer, memory, malloc, cursor, pointer);
+    }
 }
 
 function decodeNum(n, memory, offset = 0) {

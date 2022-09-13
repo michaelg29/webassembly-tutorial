@@ -19,7 +19,11 @@
         registerStruct("struct", {
             "a": "int",
             "b": "int",
-            "s": "sub"
+            "s": "sub",
+            "ptr": "int**",
+            "int_arr": "int[]",
+            "arr_length": "int",
+            "name": "char[]"
         });
 
         var memory = new WebAssembly.Memory({
@@ -27,13 +31,28 @@
             maximum: 512
         });
 
+        function decodeString(ptr) {
+            var bytes = new Uint8Array(memory.buffer, ptr);
+            var strlen = 0;
+            while (bytes[strlen] != 0) strlen++;
+
+            return new TextDecoder("utf8").decode(bytes.slice(0, strlen));
+        }
+
+        function printName(ptr) {
+            console.log(new Uint8Array(memory.buffer, ptr, 12));
+            const str = decodeString(ptr);
+            console.log('found name', str, 'at', ptr);
+        }
+
         var exports;
         WebAssembly.instantiateStreaming(fetch("nested_struct.wasm"), {
             js: {
                 mem: memory
             },
             env: {
-                emscripten_resize_heap: memory.grow
+                emscripten_resize_heap: memory.grow,
+                printNameToConsole: printName,
             }
         }).then(results => {
             exports = results.instance.exports;
@@ -57,18 +76,27 @@
             const a = document.querySelector("#a").value;
             const b = document.querySelector("#b").value;
 
-            var ptr = startEncodeStruct("struct", {
+            var ptr = encodePointer("struct", {
                 "a": a,
                 "b": b,
                 "s": {
                     "c": 413498123,
                     "d": 1056
-                }
+                },
+                "ptr": 15,
+                "int_arr": [5, 2, 0, 15, -2],
+                "arr_length": 5,
+                "name": "WebAssembly"
             }, memory, exports.wasmmalloc);
             console.log(ptr);
             var sum = exports.computeSum(ptr);
             console.log(a * b + 413498123 / 1056);
             console.log(sum);
+            console.log('int pointer is', exports.getPtr(ptr));
+            console.log('terminator sum is', exports.compSumTerminator(ptr));
+            console.log('size sum is', exports.compSumSize(ptr));
+            console.log('getting name');
+            exports.printName(ptr);
             exports.wasmfree(ptr);
         }
     </script>
