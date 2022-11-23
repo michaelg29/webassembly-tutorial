@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 extern unsigned int curTime();
-extern void logProgress(double progress);
+extern void logProgress(float progress);
 
 int main() { return 0; }
 
@@ -17,7 +17,7 @@ unsigned char *randString(int len)
     {
         // generate a printable character
         str[i] = rand() % (127 - 33) + 33;
-        logProgress((double)(i + 1) / (double)len);
+        logProgress((float)(i + 1) / (float)len);
         for (int j = 0; j < 100000000; j++)
         {
         }
