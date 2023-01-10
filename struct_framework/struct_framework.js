@@ -54,7 +54,6 @@ function encodePointer(type, obj, memory, malloc) {
     const n = getElemSize(type);
     const ptr = malloc(n);
     const buf = new Uint8Array(memory.buffer, ptr, n);
-    console.log("allocated", n, 'at', ptr, 'for', type);
 
     encodeElem(type, obj, buf, memory, malloc, 0, ptr);
     return ptr;
@@ -70,9 +69,8 @@ function encodeArray(type, obj, memory, malloc) {
     const ptr = malloc(n);
     const buf = new Uint8Array(memory.buffer, ptr, n);
     if (type === 'char') {
-        console.log('setting string', obj, obj.length, nIndividual, n);
         for (var i = 0; i < obj.length; i++) {
-            buf[i] = obj[i];
+            buf[i] = obj.charCodeAt(i);
         }
         buf[obj.length] = 0;
     } else {
@@ -88,7 +86,6 @@ function encodeArray(type, obj, memory, malloc) {
 }
 
 function encodeElem(type, obj, buffer, memory, malloc, cursor = 0, pointer = 0) {
-    console.log('encoding', obj, type, 'at', pointer, 'offset by', cursor);
     if (type.endsWith('*')) {
         const ptr = encodePointer(type.substring(0, type.length - 1), obj, memory, malloc);
         encodeInt(ptr, 4, buffer, cursor);

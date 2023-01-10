@@ -22,7 +22,7 @@
             "s": "sub",
             "ptr": "int**",
             "int_arr": "int[]",
-            "arr_length": "int",
+            "arr_size": "int",
             "name": "char[]"
         });
 
@@ -40,9 +40,8 @@
         }
 
         function printName(ptr) {
-            console.log(new Uint8Array(memory.buffer, ptr, 12));
             const str = decodeString(ptr);
-            console.log('found name', str, 'at', ptr);
+            console.log(str);
         }
 
         var exports;
@@ -85,14 +84,15 @@
                 },
                 "ptr": 15,
                 "int_arr": [5, 2, 0, 15, -2],
-                "arr_length": 5,
+                "arr_size": 5,
                 "name": "WebAssembly"
             }, memory, exports.wasmmalloc);
-            console.log(ptr);
+            console.log('ptr', ptr);
             var sum = exports.computeSum(ptr);
             console.log(a * b + 413498123 / 1056);
             console.log(sum);
             console.log('int pointer is', exports.getPtr(ptr));
+            console.log('expected sum is', 5+2+0+15-2);
             console.log('terminator sum is', exports.compSumTerminator(ptr));
             console.log('size sum is', exports.compSumSize(ptr));
             console.log('getting name');
