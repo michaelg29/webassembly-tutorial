@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Raw WAT</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        function run_module(name) {
+            var memory;
+            var exports;
+
+            function logStrLen(cursor, length) {
+                var buf = new Uint8Array(memory.buffer, cursor, length);
+                console.log(new TextDecoder("UTF-8").decode(buf));
+            }
+
+            function logStr(cursor) {
+                var buf = new Uint8Array(memory.buffer, cursor);
+
+                // look for terminator
+                let i = 0;
+                while (i < buf.length) {
+                    if (buf[i] === 0) {
+                        break;
+                    }
+                    ++i;
+                }
+
+                buf = buf.subarray(0, i);
+                console.log(new TextDecoder("UTF-8").decode(buf));
+            }
+
+            WebAssembly.instantiateStreaming(fetch(`${name}.wasm`), {
+                js: {
+                    mem: memory
+                },
+                console: {
+                    logNum: console.log,
+                    logStrLen: logStrLen,
+                    logStr: logStr,
+                }
+            }).then(results => {
+                exports = results.instance.exports;
+                memory = exports.memory;
+
+                var result = undefined;
+
+                if (name === "add") {
+                    result = exports.add(15, 16);
+                }
+                else if (name === "func") {
+                    result = exports.compute();
+                }
+                else if (name === "mem") {
+                    result = exports.print();
+                }
+                else if (name === "flow") {
+                    var arr = new Uint32Array(memory.buffer);
+                    arr[0] = 20;
+                    arr[1] = 15;
+                    arr[2] = 30;
+                    arr[3] = -17;
+                    console.log('expect', 20 + 15 + 30 - 17, 'as sum');
+
+                    result = exports.accumulate(0, 4);
+                    console.log('got', result, 'as sum');
+
+                    console.log('expect', (20 + 15 + 30 - 17) / 4, 'as avg');
+                    result = exports.average(0, 4);
+                }
+
+                console.log(name, result);
+            })
+        }
+    </script>
+
+    <button onclick="run_module('add')">add</button>
+    <button onclick="run_module('func')">func</button>
+    <button onclick="run_module('mem')">mem</button>
+    <button onclick="run_module('flow')">flow</button>
+
+</body>
+
+</html>
