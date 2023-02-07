@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Raw WAT</title>
+</head>
+
+<body>
+    <p>Hello, WebAssembly!</p>
+
+    <script>
+        function run_module() {
+            var memory;
+            var exports;
+
+            function logStrLen(cursor, length) {
+                var buf = new Uint8Array(memory.buffer, cursor, length);
+                console.log(new TextDecoder("UTF-8").decode(buf));
+            }
+
+            function logStr(cursor) {
+                var buf = new Uint8Array(memory.buffer, cursor);
+
+                // look for terminator
+                let i = 0;
+                while (i < buf.length) {
+                    if (buf[i] === 0) {
+                        break;
+                    }
+                    ++i;
+                }
+
+                buf = buf.subarray(0, i);
+                console.log(new TextDecoder("UTF-8").decode(buf));
+            }
+
+            WebAssembly.instantiateStreaming(fetch(`base64.wasm`), {
+                js: {
+                    mem: memory
+                },
+                console: {
+                    logNum: console.log,
+                    logStrLen: logStrLen,
+                    logStr: logStr,
+                }
+            }).then(results => {
+                exports = results.instance.exports;
+                memory = exports.memory;
+
+                // load string into memory
+                var string = document.getElementById("text1").value;
+                var arr = new Uint8Array(memory.buffer, 256);
+                for (let i = 0; i < string.length; i++) {
+                    arr[i] = string.charCodeAt(i);
+                }
+
+                var outAddr = 256 + string.length + 2
+                var result = exports.b64encode(256, string.length, outAddr);
+
+                arr = new Uint8Array(memory.buffer, outAddr);
+                var b64str = "";
+                for (let i = 0; i < result && arr[i] != 0; i++) {
+                    b64str += String.fromCharCode(arr[i]);
+                }
+
+                console.log(string, 'encoded to', b64str);
+            })
+        }
+    </script>
+
+    <input type="text" id="text1">
+    <input type="button" onclick="run_module()" />
+
+</body>
+
+</html>
