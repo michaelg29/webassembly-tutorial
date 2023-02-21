@@ -31,21 +31,33 @@ git clone --recursive https://github.com/WebAssembly/wabt
 cd wabt
 git submodule update --init
 ```
-	* Add the value: `$LibraryDirectory\wabt\bin` to your PATH environment variable.
+
+* Add the value: `$LibraryDirectory\wabt\bin` to your PATH environment variable.
+
 ### CMake: [download](https://cmake.org/download/)
 ```
 cd $LibraryDirectory\wabt
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=..\ -G "Visual Studio
-16 2019"
+cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=..\ -G "Visual Studio 16 2019"
 cmake --build . --config DEBUG --target install
 ```
+
 ### Testing
 * Ensure that the `bin` directory exists with a bunch of executable files.
 * Restart your terminal session, and navigate to a directory containing a .wasm file
 * Run the command `wasm2wat --help`, make sure it prints some output
 * Test the tool using a file (i.e. `wasm2wat exported.wasm`)
+
+### Updating
+There may come a day when you get an error in using a wabt tool, something like `Bad magic value`. In this case, you need to update your toolset. To do this, we need to pull new code from GitHub then rebuild with CMake as follows:
+```
+cd $LibraryDirectory\wabt
+git pull
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=..\ -G "Visual Studio 16 2019"
+cmake --build . --config DEBUG --target install
+```
 
 ## Helpful resources
 * [MDN handbook](https://developer.mozilla.org/en-US/docs/WebAssembly)
